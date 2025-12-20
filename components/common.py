@@ -15,13 +15,67 @@ def apply_common_styles():
         html, body, [class*="css"] {
             font-family: 'Noto Sans KR', sans-serif;
         }
+                
+        section[data-testid="stSidebar"] .stButton button {
+            width: 100%;
+            border: 1px solid transparent;
+            background-color: transparent;
+            color: #444; /* 글자색 조금 진하게 */
+            text-align: left;
+            padding-left: 0.8rem;
+            transition: all 0.2s;
+        }
+        
+        /* 마우스 올렸을 때 */
+        section[data-testid="stSidebar"] .stButton button:hover {
+            background-color: #FFF9F5;
+            color: #FF6B35;
+        }
+        
+        /* 선택된 방 */
+        section[data-testid="stSidebar"] .stButton button[kind="primary"] {
+            background-color: #FFF3E0 !important;
+            border: 1px solid #FFB088 !important;
+            color: #E65100 !important;
+            font-weight: 600;
+        }
+
+        [data-testid="stSidebar"] [data-testid="stPopover"] > button {
+            border: none !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            color: #999 !important;
+            padding: 0 !important;
+            width: auto !important;
+            
+            opacity: 0 !important;
+            transition: opacity 0.2s ease !important;
+            transform: scale(1.2); 
+            margin-top: 5px !important;
+        }
+
+        [data-testid="stSidebar"] [data-testid="stPopover"] > button:hover {
+            opacity: 1 !important;
+            color: #333 !important;
+            background-color: rgba(0,0,0,0.05) !important; /* 살짝 원형 배경 */
+            border-radius: 50% !important;
+        }
+        
+      
+        [data-testid="column"]:hover ~ [data-testid="column"] [data-testid="stPopover"] > button {
+            opacity: 1 !important;
+        }
+
+        [data-testid="stSidebar"] [data-testid="stPopover"] > button[aria-expanded="true"] {
+            opacity: 1 !important;
+            color: #FF6B35 !important;
+        }
 
         .main .block-container {
             padding: 1.5rem 1rem 6rem 1rem;
             max-width: 720px;
         }
 
-        /* 튜터 인사 영역 */
         .tutor-greeting {
             text-align: center;
             padding: 2.5rem 1rem 1.5rem 1rem;
@@ -289,6 +343,7 @@ def apply_common_styles():
             font-size: 0.75rem;
             color: #AAA;
         }
+                
     </style>
     """, unsafe_allow_html=True)
 
