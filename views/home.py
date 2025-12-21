@@ -40,14 +40,20 @@ QUICK_QUESTIONS = [
 ]
 
 def render():
-    """홈 화면 렌더링 (사이드바 유지 + 중앙 화면 전환)"""
+    """홈 화면 렌더링"""
     
     # 1. DB 및 세션 초기화
     db.init_db()
     
-    # 2. 홈 화면 내부 모드 초기화 (기본값: chat)
+    # 홈 화면 내부 모드 초기화
     if "home_mode" not in st.session_state:
         st.session_state.home_mode = "chat"
+
+    # [수정] 처리 상태 플래그 초기화 (중복 입력 방지용)
+    if "processing" not in st.session_state:
+        st.session_state.processing = False
+    if "pending_prompt" not in st.session_state:
+        st.session_state.pending_prompt = None
 
     # 현재 세션 ID가 없으면 설정
     if "current_session_id" not in st.session_state:
@@ -62,18 +68,17 @@ def render():
         else:
             st.session_state.current_session_id = db.create_session()
     
-    # 3. 사이드바 렌더링 (항상 보임)
+    # 3. 사이드바 렌더링
     _render_sidebar()
 
     # 4. 모드에 따라 메인 화면 컨텐츠 교체
-    # Import를 여기서 수행하여 순환 참조 에러 방지
     mode = st.session_state.home_mode
 
     if mode == "chat":
-        # [기본] 채팅 화면
         session_id = st.session_state.current_session_id
         st.session_state.messages = db.load_messages(session_id)
         
+        # 메시지가 없으면 인사말, 있으면 채팅창
         if not st.session_state.messages:
             _render_greeting()
         else:
@@ -105,30 +110,28 @@ def render():
 
 
 def _render_sidebar():
-    """사이드바 - 네비게이션 역할 수행"""
+    """사이드바"""
     with st.sidebar:
-        # [1] 타이틀 및 새 대화
         st.markdown("### 🍊 오렌지 튜터")
         
-        # '새 대화' 클릭 시 -> 채팅 모드로 복귀
+        # 버튼 클릭 시 처리 중이면 동작 안 하게 막을 수도 있으나, 
+        # rerurn이 빠르므로 여기서는 UI 블로킹까진 안 함
         if st.button("+ 새 대화 시작", use_container_width=True):
             new_id = db.create_session()
             st.session_state.current_session_id = new_id
             st.session_state.messages = []
-            st.session_state.home_mode = "chat" # 채팅 화면으로 전환
+            st.session_state.home_mode = "chat"
+            st.session_state.processing = False # 상태 초기화
             st.rerun()
             
         st.markdown("<div style='height: 15px'></div>", unsafe_allow_html=True)
         st.caption("대화 목록")
 
         sessions = db.get_sessions()
-        
         if not sessions:
             st.caption("대화 기록이 없습니다.")
             
-        # [2] 대화 목록 (클릭 시 채팅 모드로 전환)
         for s in sessions:
-            # 현재 세션이고 + 채팅 모드일 때만 활성화 표시
             is_active = (s["id"] == st.session_state.get("current_session_id")) and (st.session_state.home_mode == "chat")
             title_label = s['title'] if s['title'] and s['title'].strip() else "새로운 대화"
             
@@ -142,7 +145,8 @@ def _render_sidebar():
                     type="primary" if is_active else "secondary"
                 ):
                     st.session_state.current_session_id = s["id"]
-                    st.session_state.home_mode = "chat" # ★ 채팅 모드로 강제 전환
+                    st.session_state.home_mode = "chat"
+                    st.session_state.processing = False
                     st.rerun()
             
             with c_delete:
@@ -155,11 +159,11 @@ def _render_sidebar():
                          st.session_state.current_session_id = db.create_session()
                     st.session_state.messages = []
                     st.session_state.home_mode = "chat"
+                    st.session_state.processing = False
                     st.rerun()
         
         st.divider()
 
-        # [3] 자료 추가
         st.markdown("### 자료 추가")
         uploaded = st.file_uploader(
             "파일 선택",
@@ -170,29 +174,26 @@ def _render_sidebar():
             if st.button("파일 업로드", type="primary", use_container_width=True):
                 _add_file(uploaded)
 
-        # [4] 자료 관리 메뉴 (클릭 시 학습 모드로 전환)
         try:
             rag = get_rag_system()
             sources = rag.get_sources()
             if sources:
                 st.caption(f"저장된 자료 ({len(sources)}개)")
                 if st.button("📂 자료 전체 관리", use_container_width=True):
-                    st.session_state.home_mode = "study" # 화면 전환
+                    st.session_state.home_mode = "study"
                     st.rerun()
         except Exception:
             pass
 
         st.divider()
 
-        # [5] 학습 도구 메뉴 (클릭 시 각 모드로 전환)
         st.markdown("### 학습 도구")
-        
         if st.button("✍️ 퀴즈 풀기", use_container_width=True):
-            st.session_state.home_mode = "quiz" # 화면 전환
+            st.session_state.home_mode = "quiz"
             st.rerun()
  
         if st.button("🔄 복습 노트", use_container_width=True):
-            st.session_state.home_mode = "review" # 화면 전환
+            st.session_state.home_mode = "review"
             st.rerun()
             
         stats = st.session_state.get("study_stats", {"studied": 0, "accuracy": 0})
@@ -210,48 +211,108 @@ def _render_greeting():
     </div>
     """, unsafe_allow_html=True)
 
-    clicked_question = None
-    cols = st.columns(4)
-    for i, q in enumerate(QUICK_QUESTIONS):
-        with cols[i]:
-            if st.button(q, key=f"quick_{i}", use_container_width=True):
-                clicked_question = q
+    # [수정] 처리 중일 때는 버튼과 입력창을 비활성화하거나 입력을 처리
+    if st.session_state.processing:
+        # 처리 중일 때 UI 표시 (입력 불가)
+        _render_quick_buttons(disabled=True)
+        st.chat_input("답변을 생성하는 중입니다...", disabled=True)
+        
+        # [핵심] UI 렌더링 후 실제 로직 실행 (Pending된 프롬프트 처리)
+        if st.session_state.pending_prompt:
+            _handle_user_input(st.session_state.pending_prompt)
+            
+    else:
+        # 대기 상태 (입력 가능)
+        clicked_question = _render_quick_buttons(disabled=False)
+        
+        # 채팅창 입력
+        prompt = st.chat_input("질문을 입력하세요...")
+        
+        # 입력이 발생하면 -> 상태 변경 후 Rerun (화면 갱신 -> 로직 실행)
+        if clicked_question:
+            st.session_state.pending_prompt = clicked_question
+            st.session_state.processing = True
+            st.rerun()
+        elif prompt:
+            st.session_state.pending_prompt = prompt
+            st.session_state.processing = True
+            st.rerun()
 
-    if clicked_question:
-        _handle_user_input(clicked_question)
 
-    prompt = st.chat_input("질문을 입력하세요...")
-    if prompt:
-        _handle_user_input(prompt)
+def _render_quick_buttons(disabled=False):
+    """빠른 질문 버튼 렌더링 헬퍼"""
+    clicked = None
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button(QUICK_QUESTIONS[0], key="q_0", use_container_width=True, disabled=disabled):
+            clicked = QUICK_QUESTIONS[0]
+    with c2:
+        if st.button(QUICK_QUESTIONS[1], key="q_1", use_container_width=True, disabled=disabled):
+            clicked = QUICK_QUESTIONS[1]
+            
+    c3, c4 = st.columns(2)
+    with c3:
+        if st.button(QUICK_QUESTIONS[2], key="q_2", use_container_width=True, disabled=disabled):
+            clicked = QUICK_QUESTIONS[2]
+    with c4:
+        if st.button(QUICK_QUESTIONS[3], key="q_3", use_container_width=True, disabled=disabled):
+            clicked = QUICK_QUESTIONS[3]
+            
+    return clicked
 
 
 def _render_chat():
     """채팅 화면"""
+    # 대화 기록 표시
     for msg in st.session_state.messages:
         role = msg["role"]
         with st.chat_message(role, avatar="🍊" if role == "assistant" else None):
             st.markdown(msg["content"])
 
-    prompt = st.chat_input("질문을 입력하세요...")
-    if prompt:
-        _handle_user_input(prompt)
+    # [수정] 이중 입력 방지 로직
+    if st.session_state.processing:
+        # 1. 처리 중이면 입력창 비활성화
+        st.chat_input("답변을 생성하는 중입니다...", disabled=True)
+        
+        # 2. 렌더링이 끝난 후, 대기 중인 프롬프트가 있다면 처리 시작
+        if st.session_state.pending_prompt:
+            _handle_user_input(st.session_state.pending_prompt)
+            
+    else:
+        # 3. 대기 중이면 입력창 활성화
+        prompt = st.chat_input("질문을 입력하세요...")
+        if prompt:
+            # 4. 입력 받으면 상태 설정하고 리런 -> 비활성화된 UI 보여주기 위함
+            st.session_state.pending_prompt = prompt
+            st.session_state.processing = True
+            st.rerun()
 
 
 def _handle_user_input(user_text):
-    """사용자 입력 처리"""
+    """사용자 입력 처리 (실제 로직)"""
+    
+    # 1. 사용자 메시지 저장 및 표시
     st.session_state.messages.append({"role": "user", "content": user_text})
     db.save_message(st.session_state.current_session_id, "user", user_text)
     
     with st.chat_message("user"):
         st.markdown(user_text)
     
+    # 2. AI 답변 생성 및 표시
     with st.chat_message("assistant", avatar="🍊"):
         response = _generate_response(user_text)
+        
+        # 답변 저장
         st.session_state.messages.append({"role": "assistant", "content": response})
         db.save_message(st.session_state.current_session_id, "assistant", response)
         
         if len(st.session_state.messages) == 2:
             _generate_title_summary(user_text, response)
+
+    # [중요] 처리가 다 끝났으면 상태 초기화 후 리런 (입력창 다시 활성화)
+    st.session_state.pending_prompt = None
+    st.session_state.processing = False
+    st.rerun()
 
 
 def _generate_title_summary(user_text, ai_text):
@@ -262,14 +323,17 @@ def _generate_title_summary(user_text, ai_text):
             base_url=BASE_URL,
             api_key=API_KEY,
             temperature=0.5,
-            max_tokens=30
+            max_tokens=50
         )
+        
         messages = [
-            SystemMessage(content="10자 이내의 명사형 제목으로 요약해. 예: '파이썬 기초'."),
+            SystemMessage(content="사용자의 질문과 그에 대한 AI의 답변 내용을 모두 고려하여, 대화의 핵심 주제를 15자 이내의 명사형 제목으로 요약해줘. (예: '파이썬 기초 문법', 'RAG 시스템 구조')"),
             HumanMessage(content=f"질문: {user_text}\n답변: {ai_text}")
         ]
+        
         response = llm.invoke(messages)
         new_title = response.content.strip().replace('"', '').replace("'", "")
+        
         if new_title and 1 < len(new_title) < 20:
             db.update_session_title(st.session_state.current_session_id, new_title)
     except Exception as e:
@@ -358,7 +422,7 @@ def _add_file(uploaded):
 
         st.success(f"'{name}' 추가됨")
         add_study_history(f"자료: {name}")
-        st.session_state.home_mode = "study" # 추가 후 자료 관리 화면으로 자동 이동
+        st.session_state.home_mode = "study"
         st.rerun()
 
     except Exception as e:
