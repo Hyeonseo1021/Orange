@@ -4,15 +4,12 @@
 """
 
 import streamlit as st
-from components.common import render_back_button
 from rag import get_rag_system
 from pipeline import get_pipeline, PipelineInput, TaskType
 
 
 def render():
     """복습 화면"""
-
-    render_back_button()
 
     st.markdown("""
     <div class="page-header">

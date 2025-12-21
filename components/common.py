@@ -1,6 +1,7 @@
+# common.py
 # -*- coding: utf-8 -*-
 """
-공통 UI 컴포넌트 - 튜터 중심 디자인
+공통 UI 컴포넌트 - 튜터 중심 디자인 (모든 사이드바 버튼 호버 적용)
 """
 
 import streamlit as st
@@ -15,61 +16,115 @@ def apply_common_styles():
         html, body, [class*="css"] {
             font-family: 'Noto Sans KR', sans-serif;
         }
-                
+
+        /* ================================================================= */
+        /* [1] 사이드바 버튼 공통 스타일 (모든 버튼 적용) */
+        /* ================================================================= */
+        
+        /* 1-1. 버튼 기본 상태: 투명하고 깔끔하게 */
         section[data-testid="stSidebar"] .stButton button {
-            width: 100%;
-            border: 1px solid transparent;
-            background-color: transparent;
-            color: #444; /* 글자색 조금 진하게 */
-            text-align: left;
-            padding-left: 0.8rem;
-            transition: all 0.2s;
-        }
-        
-        /* 마우스 올렸을 때 */
-        section[data-testid="stSidebar"] .stButton button:hover {
-            background-color: #FFF9F5;
-            color: #FF6B35;
-        }
-        
-        /* 선택된 방 */
-        section[data-testid="stSidebar"] .stButton button[kind="primary"] {
-            background-color: #FFF3E0 !important;
-            border: 1px solid #FFB088 !important;
-            color: #E65100 !important;
-            font-weight: 600;
-        }
-
-        [data-testid="stSidebar"] [data-testid="stPopover"] > button {
-            border: none !important;
             background: transparent !important;
+            border: none !important;
             box-shadow: none !important;
-            color: #999 !important;
-            padding: 0 !important;
-            width: auto !important;
-            
-            opacity: 0 !important;
-            transition: opacity 0.2s ease !important;
-            transform: scale(1.2); 
-            margin-top: 5px !important;
+            color: #555 !important;
+            text-align: left !important;
+            padding: 0.5rem 0.5rem !important;
+            font-weight: 400 !important;
+            transition: all 0.2s ease-in-out !important;
+            border-radius: 6px !important;
+            margin: 0 !important;
+            width: 100%;
+            line-height: 1.5 !important;
         }
 
-        [data-testid="stSidebar"] [data-testid="stPopover"] > button:hover {
+        /* 1-2. ★ 일반 버튼 호버 효과 (자료관리, 퀴즈, 복습노트 등) */
+        /* 사이드바의 모든 버튼에 대해 기본적으로 배경색과 이동 효과 적용 */
+        section[data-testid="stSidebar"] .stButton button:hover {
+            background-color: #FFF3E0 !important; /* 연한 오렌지 배경 */
+            color: #FF6B35 !important;            /* 진한 오렌지 글씨 */
+            transform: translateX(3px);           /* 오른쪽으로 살짝 이동 */
+        }
+
+        /* 1-3. Primary 버튼 (현재 선택된 방) 텍스트 색상 */
+        section[data-testid="stSidebar"] .stButton button[kind="primary"] {
+            color: #FF6B35 !important;
+            font-weight: 700 !important;
+            background: transparent !important; 
+        }
+
+        /* ================================================================= */
+        /* [2] 대화 목록 리스트 (여기는 줄(Row) 전체가 반응해야 함) */
+        /* ================================================================= */
+        
+        /* 2-1. 줄(Row) 컨테이너 설정 */
+        section[data-testid="stSidebar"] [data-testid="stHorizontalBlock"] {
+            border-radius: 6px;
+            padding: 2px 0;
+            margin-bottom: 2px;
+            transition: background-color 0.2s;
+            align-items: center !important;
+            display: flex !important;
+            gap: 0 !important;
+        }
+
+        /* 2-2. 줄 전체 호버 시 배경색 */
+        section[data-testid="stSidebar"] [data-testid="stHorizontalBlock"]:hover {
+            background-color: #FFF3E0 !important; 
+        }
+
+        /* 2-3. ★ [예외 처리] 대화 목록 안의 버튼은 자체 배경색 제거 */
+        /* 줄(Row)이 배경을 담당하므로, 버튼 자체의 배경은 투명하게 유지해야 겹치지 않음 */
+        section[data-testid="stSidebar"] [data-testid="stHorizontalBlock"] .stButton button:hover {
+            background-color: transparent !important; 
+        }
+
+        /* 2-4. 선택된 방의 '줄(Row) 전체' 배경색 */
+        section[data-testid="stSidebar"] [data-testid="stHorizontalBlock"]:has(button[kind="primary"]) {
+            background-color: rgba(255, 107, 53, 0.1) !important;
+            border-radius: 6px;
+        }
+
+        /* ================================================================= */
+        /* [3] 삭제(X) 버튼 스타일링 */
+        /* ================================================================= */
+        
+        /* 3-1. 평소 상태: 투명함 */
+        section[data-testid="stSidebar"] [data-testid="stHorizontalBlock"] [data-testid="column"]:last-child button {
+            opacity: 0 !important;
+            color: #999 !important;
+            font-weight: 300 !important;
+            transition: opacity 0.2s, color 0.2s !important;
+            text-align: center !important;
+            padding: 0 !important;
+            height: 100% !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+
+        /* 3-2. 선택된 방일 경우 -> X 버튼 오렌지색 */
+        section[data-testid="stSidebar"] [data-testid="stHorizontalBlock"]:has(button[kind="primary"]) [data-testid="column"]:last-child button {
+            color: #FF6B35 !important; 
+        }
+
+        /* 3-3. 줄 호버 시 -> X 버튼 나타남 */
+        section[data-testid="stSidebar"] [data-testid="stHorizontalBlock"]:hover [data-testid="column"]:last-child button {
             opacity: 1 !important;
-            color: #333 !important;
-            background-color: rgba(0,0,0,0.05) !important; /* 살짝 원형 배경 */
-            border-radius: 50% !important;
         }
         
-      
-        [data-testid="column"]:hover ~ [data-testid="column"] [data-testid="stPopover"] > button {
-            opacity: 1 !important;
+        /* 3-4. X 버튼 호버 시 (빨간색 강제 적용) */
+        section[data-testid="stSidebar"] [data-testid="stHorizontalBlock"] [data-testid="column"]:last-child button:hover {
+            color: #FF3B30 !important; 
+            background-color: rgba(255, 59, 48, 0.1) !important;
+            border-radius: 50% !important;
+            width: 28px !important;
+            height: 28px !important;
+            margin: 0 auto !important;
         }
 
-        [data-testid="stSidebar"] [data-testid="stPopover"] > button[aria-expanded="true"] {
-            opacity: 1 !important;
-            color: #FF6B35 !important;
-        }
+        /* ================================================================= */
+        /* [4] 메인 콘텐츠 및 기타 스타일 */
+        /* ================================================================= */
 
         .main .block-container {
             padding: 1.5rem 1rem 6rem 1rem;
@@ -95,7 +150,7 @@ def apply_common_styles():
             color: #999;
         }
 
-        /* 빠른 질문 버튼들 */
+        /* 빠른 질문 버튼 */
         .quick-questions {
             display: flex;
             flex-wrap: wrap;
@@ -230,16 +285,16 @@ def apply_common_styles():
             color: #333;
         }
 
-        /* 버튼 */
-        .stButton > button {
+        /* 메인 영역 버튼 */
+        section[data-testid="stMain"] .stButton > button {
             border-radius: 10px;
             font-weight: 500;
         }
-        .stButton > button[kind="primary"] {
+        section[data-testid="stMain"] .stButton > button[kind="primary"] {
             background: #FF6B35;
             border: none;
         }
-        .stButton > button[kind="primary"]:hover {
+        section[data-testid="stMain"] .stButton > button[kind="primary"]:hover {
             background: #E85A2A;
         }
 
@@ -357,11 +412,7 @@ def render_header(title: str, subtitle: str = ""):
     """, unsafe_allow_html=True)
 
 
-def render_back_button():
-    """뒤로가기 버튼"""
-    if st.button("← 돌아가기", key="back_btn"):
-        st.session_state.current_page = "home"
-        st.rerun()
+
 
 
 def render_bottom_nav(current: str = "home"):

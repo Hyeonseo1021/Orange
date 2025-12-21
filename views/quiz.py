@@ -5,7 +5,6 @@
 
 import streamlit as st
 import json
-from components.common import render_back_button
 from rag import get_rag_system
 from pipeline import get_pipeline, PipelineInput, TaskType
 
@@ -13,7 +12,6 @@ from pipeline import get_pipeline, PipelineInput, TaskType
 def render():
     """퀴즈 화면"""
 
-    render_back_button()
 
     st.markdown("""
     <div class="page-header">
@@ -253,7 +251,4 @@ def _render_result():
                 "generated": False
             }
             st.rerun()
-    with col2:
-        if st.button("돌아가기", type="primary", use_container_width=True):
-            st.session_state.current_page = "home"
-            st.rerun()
+   

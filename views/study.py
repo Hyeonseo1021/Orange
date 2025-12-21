@@ -4,15 +4,12 @@
 """
 
 import streamlit as st
-from components.common import render_back_button
 from rag import get_rag_system
 from views.home import add_study_history
 
 
 def render():
     """자료 관리 화면"""
-
-    render_back_button()
 
     st.markdown("""
     <div class="page-header">
